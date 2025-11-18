@@ -7,23 +7,29 @@ namespace QuizApi.Controller
     [Route("api/[controller]")]
     public class QuizController : ControllerBase
     {
-        // GET api/quiz
+        // GET api/quiz → returns all category names
         [HttpGet]
         public IActionResult GetCategories()
         {
             return Ok(QuizData.Questions.Keys);
         }
 
-        // GET api/quiz/HTML
+        // GET api/quiz/html | api/quiz/JavaScript | etc.
         [HttpGet("{category}")]
         public IActionResult GetQuestions(string category)
         {
-            string key = category.ToUpper();
+            if (string.IsNullOrEmpty(category))
+                return BadRequest(new { message = "Category is required" });
 
-            if (!QuizData.Questions.ContainsKey(key))
-                return NotFound(new { message = "Category not found" });
+            // Case-insensitive lookup
+            var questionList = QuizData.Questions
+                .FirstOrDefault(kvp => kvp.Key.Equals(category, StringComparison.OrdinalIgnoreCase))
+                .Value;
 
-            return Ok(QuizData.Questions[key]);
+            if (questionList == null)
+                return NotFound(new { message = $"Category '{category}' not found" });
+
+            return Ok(questionList);
         }
     }
 }
