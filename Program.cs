@@ -9,9 +9,21 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// CORS – only localhost for now (exactly what you need)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DevPolicy", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();   
+    });
+});
+
 var app = builder.Build();
 
-// Enable Swagger
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -20,7 +32,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Enable API controllers
+// THIS LINE IS CRUCIAL – must come before MapControllers()
+app.UseCors("DevPolicy");
+
 app.MapControllers();
 
 app.Run();
