@@ -1,7 +1,9 @@
 // QuizApi/Controller/QuizController.cs
+
 using Microsoft.AspNetCore.Mvc;
 using QuizApi.Data;
 using QuizApi.Models;
+using System.Collections.Generic;
 
 namespace QuizApi.Controller
 {
@@ -34,6 +36,29 @@ namespace QuizApi.Controller
 
             _categoryService.AddCategory(category.Title, category.ImgSrc ?? "");
             return Ok(new { message = "Category added" });
+        }
+
+        // PUT api/quiz/categories/{id} → edit category (title or imgSrc)
+        [HttpPut("categories/{id}")]
+        public IActionResult EditCategory(int id, [FromBody] Category category)
+        {
+            if (string.IsNullOrWhiteSpace(category?.Title))
+                return BadRequest(new { message = "Title is required" });
+
+            var updated = _categoryService.UpdateCategory(id, category.Title, category.ImgSrc);
+            return updated
+                ? Ok(new { message = "Category updated" })
+                : NotFound(new { message = "Category not found" });
+        }
+
+        // DELETE api/quiz/categories/{id} → delete category
+        [HttpDelete("categories/{id}")]
+        public IActionResult DeleteCategory(int id)
+        {
+            var deleted = _categoryService.DeleteCategory(id);
+            return deleted
+                ? Ok(new { message = "Category deleted" })
+                : NotFound(new { message = "Category not found" });
         }
 
         // GET api/quiz/{category} → e.g. /api/quiz/python

@@ -1,3 +1,5 @@
+// QuizApi/Data/QuizDataService.cs
+
 using Microsoft.Data.Sqlite;
 using QuizApi.Models;
 using System.Collections.Generic;
@@ -48,6 +50,43 @@ namespace QuizApi.Data
             cmd.Parameters.AddWithValue("$title", title);
             cmd.Parameters.AddWithValue("$imgSrc", imgSrc);
             cmd.ExecuteNonQuery();
+        }
+
+        // ---------------- UPDATE CATEGORY ----------------
+        public bool UpdateCategory(int id, string newTitle, string newImgSrc)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                UPDATE Categories
+                SET Title = $newTitle, ImgSrc = $newImgSrc
+                WHERE Id = $id
+            ";
+            cmd.Parameters.AddWithValue("$id", id);
+            cmd.Parameters.AddWithValue("$newTitle", newTitle);
+            cmd.Parameters.AddWithValue("$newImgSrc", newImgSrc ?? string.Empty);
+
+            var rowsAffected = cmd.ExecuteNonQuery();
+            return rowsAffected > 0; // returns true if category was updated
+        }
+
+        // ---------------- DELETE CATEGORY ----------------
+        public bool DeleteCategory(int id)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                DELETE FROM Categories
+                WHERE Id = $id
+            ";
+            cmd.Parameters.AddWithValue("$id", id);
+
+            var rowsAffected = cmd.ExecuteNonQuery();
+            return rowsAffected > 0; // returns true if category was deleted
         }
 
         // ---------------- ADD QUESTION ----------------
