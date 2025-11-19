@@ -1,188 +1,219 @@
+using Microsoft.Data.Sqlite;
 using QuizApi.Models;
+using System.Collections.Generic;
+using System.Text.Json;
 
 namespace QuizApi.Data
 {
-    public static class QuizData
+    public class QuizDataService
     {
-        public static readonly Dictionary<string, List<Question>> Questions =
-            new Dictionary<string, List<Question>>
+        private readonly string _connectionString = "Data Source=./quiz.db";
+
+        public QuizDataService()
         {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS Categories (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Title TEXT NOT NULL UNIQUE,
+                    ImgSrc TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS Questions (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CategoryId INTEGER NOT NULL,
+                    QuestionText TEXT NOT NULL,
+                    Options TEXT,
+                    Answer TEXT,
+                    FOREIGN KEY (CategoryId) REFERENCES Categories (Id)
+                );
+            ";
+            cmd.ExecuteNonQuery();
+        }
+
+        // ---------------- ADD CATEGORY ----------------
+        public void AddCategory(string title, string imgSrc)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO Categories (Title, ImgSrc)
+                VALUES ($title, $imgSrc)
+            ";
+            cmd.Parameters.AddWithValue("$title", title);
+            cmd.Parameters.AddWithValue("$imgSrc", imgSrc);
+            cmd.ExecuteNonQuery();
+        }
+
+        // ---------------- ADD QUESTION ----------------
+        public void AddQuestion(string categoryTitle, Question question)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var getCat = connection.CreateCommand();
+            getCat.CommandText = "SELECT Id FROM Categories WHERE Title = $title";
+            getCat.Parameters.AddWithValue("$title", categoryTitle);
+
+            var categoryId = (long?)getCat.ExecuteScalar();
+            if (categoryId == null) return;
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO Questions (CategoryId, QuestionText, Options, Answer)
+                VALUES ($categoryId, $text, $options, $answer)
+            ";
+            cmd.Parameters.AddWithValue("$categoryId", categoryId);
+            cmd.Parameters.AddWithValue("$text", question.QuestionText);
+            cmd.Parameters.AddWithValue("$options", question.Options != null ? JsonSerializer.Serialize(question.Options) : null);
+            cmd.Parameters.AddWithValue("$answer", question.Answer);
+
+            cmd.ExecuteNonQuery();
+        }
+
+        // ---------------- GET QUESTIONS BY CATEGORY ----------------
+        public List<Question> GetQuestionsByCategory(string title)
+        {
+            var list = new List<Question>();
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT Questions.Id, Questions.QuestionText, Questions.Options, Questions.Answer
+                FROM Questions
+                JOIN Categories ON Categories.Id = Questions.CategoryId
+                WHERE Categories.Title = $title
+            ";
+            cmd.Parameters.AddWithValue("$title", title);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
             {
-                "HTML", new List<Question>
+                list.Add(new Question
                 {
-                    new Question
-                    {
-                        QuestionText = "What does HTML stand for?",
-                        Options = new List<string>
-                        {
-                            "Hyper Text Markup Language",
-                            "Home Tool Markup Language",
-                            "Hyperlinks and Text Markup Language",
-                            "Hyperlinking Text Managing Language"
-                        },
-                        Answer = "Hyper Text Markup Language"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which HTML element is used for the largest heading?",
-                        Options = new List<string> { "<heading>", "<h6>", "<h1>", "<head>" },
-                        Answer = "<h1>"
-                    },
-                    new Question
-                    {
-                        QuestionText = "What is the correct HTML element for inserting a line break?",
-                        Options = new List<string> { "<br>", "<lb>", "<break>", "<newline>" },
-                        Answer = "<br>"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which attribute specifies an alternate text for an image?",
-                        Options = new List<string> { "src", "title", "alt", "longdesc" },
-                        Answer = "alt"
-                    },
-                    new Question
-                    {
-                        QuestionText = "What is the correct HTML element for playing video files?",
-                        Options = new List<string> { "<media>", "<movie>", "<video>", "<player>" },
-                        Answer = "<video>"
-                    }
-                }
-            },
-            {
-                "CSS", new List<Question>
-                {
-                    new Question
-                    {
-                        QuestionText = "What does CSS stand for?",
-                        Options = new List<string>
-                        {
-                            "Cascading Style Sheets",
-                            "Colorful Style Sheets",
-                            "Creative Style Syntax",
-                            "Computer Styled Sheets"
-                        },
-                        Answer = "Cascading Style Sheets"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which property changes the text color of an element?",
-                        Options = new List<string> { "font-color", "color", "text-color", "fgcolor" },
-                        Answer = "color"
-                    },
-                    new Question
-                    {
-                        QuestionText = "How do you make each word start with a capital letter?",
-                        Options = new List<string>
-                        {
-                            "text-transform: uppercase;",
-                            "text-style: capitalize;",
-                            "transform: capitalize;",
-                            "text-transform: capitalize;"
-                        },
-                        Answer = "text-transform: capitalize;"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which property controls the space between lines of text?",
-                        Options = new List<string>
-                        {
-                            "line-height",
-                            "letter-spacing",
-                            "word-spacing",
-                            "spacing"
-                        },
-                        Answer = "line-height"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Correct syntax to link external CSS file?",
-                        Options = new List<string>
-                        {
-                            "<link rel='stylesheet' href='style.css'>",
-                            "<style src='style.css'>",
-                            "<css link='style.css'>",
-                            "<link src='style.css'>"
-                        },
-                        Answer = "<link rel='stylesheet' href='style.css'>"
-                    }
-                }
-            },
-            {
-                "JavaScript", new List<Question>
-                {
-                    new Question
-                    {
-                        QuestionText = "Which company developed JavaScript?",
-                        Options = new List<string> { "Microsoft", "Sun Microsystems", "Netscape", "Oracle" },
-                        Answer = "Netscape"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which keyword declares a variable in JavaScript?",
-                        Options = new List<string> { "int", "let", "define", "declare" },
-                        Answer = "let"
-                    },
-                    new Question
-                    {
-                        QuestionText = "What is the output of typeof null?",
-                        Options = new List<string> { "null", "object", "undefined", "string" },
-                        Answer = "object"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which symbol is used for comments?",
-                        Options = new List<string> { "//", "/*", "#", "<!--" },
-                        Answer = "//"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which method converts JSON to a JS object?",
-                        Options = new List<string>
-                        {
-                            "JSON.convert()",
-                            "JSON.toObject()",
-                            "JSON.parse()",
-                            "JSON.stringify()"
-                        },
-                        Answer = "JSON.parse()"
-                    }
-                }
-            },
-            {
-                "TypeScript", new List<Question>
-                {
-                    new Question
-                    {
-                        QuestionText = "TypeScript is a superset of which language?",
-                        Options = new List<string> { "C#", "Java", "JavaScript", "Python" },
-                        Answer = "JavaScript"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which feature catches type errors at compile time?",
-                        Options = new List<string> { "Type inference", "Static typing", "Dynamic typing", "Loose typing" },
-                        Answer = "Static typing"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which keyword defines an interface?",
-                        Options = new List<string> { "type", "struct", "interface", "define" },
-                        Answer = "interface"
-                    },
-                    new Question
-                    {
-                        QuestionText = "File extension of TypeScript?",
-                        Options = new List<string> { ".js", ".jsx", ".ts", ".tsx" },
-                        Answer = ".ts"
-                    },
-                    new Question
-                    {
-                        QuestionText = "Which command compiles TS to JS?",
-                        Options = new List<string> { "tsc", "npm start", "ts-run", "node-ts" },
-                        Answer = "tsc"
-                    }
-                }
+                    Id = reader.GetInt32(0),
+                    QuestionText = reader.GetString(1),
+                    Options = reader.IsDBNull(2) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(2)),
+                    Answer = reader.IsDBNull(3) ? null : reader.GetString(3)
+                });
             }
-        };
+
+            return list;
+        }
+
+        // ---------------- GET ALL CATEGORIES ----------------
+        public List<Category> GetCategoryObjects()
+        {
+            var list = new List<Category>();
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT Id, Title, ImgSrc FROM Categories";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(new Category
+                {
+                    Id = reader.GetInt32(0),
+                    Title = reader.GetString(1),
+                    ImgSrc = reader.IsDBNull(2) ? "" : reader.GetString(2)
+                });
+            }
+
+            return list;
+        }
+
+        // ---------------- UPDATE QUESTION ----------------
+        public bool UpdateQuestion(string categoryTitle, int index, Question updatedQuestion)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            // Get category ID
+            var getCat = connection.CreateCommand();
+            getCat.CommandText = "SELECT Id FROM Categories WHERE Title = $title";
+            getCat.Parameters.AddWithValue("$title", categoryTitle);
+            var categoryId = (long?)getCat.ExecuteScalar();
+            if (categoryId == null) return false;
+
+            // Get question ID by index
+            var getQuestion = connection.CreateCommand();
+            getQuestion.CommandText = @"
+                SELECT Id
+                FROM Questions
+                WHERE CategoryId = $categoryId
+                ORDER BY Id
+                LIMIT 1 OFFSET $index
+            ";
+            getQuestion.Parameters.AddWithValue("$categoryId", categoryId);
+            getQuestion.Parameters.AddWithValue("$index", index);
+
+            var questionId = (long?)getQuestion.ExecuteScalar();
+            if (questionId == null) return false;
+
+            // Update question
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                UPDATE Questions
+                SET QuestionText = $text,
+                    Options = $options,
+                    Answer = $answer
+                WHERE Id = $id
+            ";
+            cmd.Parameters.AddWithValue("$text", updatedQuestion.QuestionText);
+            cmd.Parameters.AddWithValue("$options", updatedQuestion.Options != null ? JsonSerializer.Serialize(updatedQuestion.Options) : null);
+            cmd.Parameters.AddWithValue("$answer", updatedQuestion.Answer);
+            cmd.Parameters.AddWithValue("$id", questionId);
+
+            cmd.ExecuteNonQuery();
+            return true;
+        }
+
+        // ---------------- DELETE QUESTION ----------------
+        public bool DeleteQuestion(string categoryTitle, int index)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            // Get category ID
+            var getCat = connection.CreateCommand();
+            getCat.CommandText = "SELECT Id FROM Categories WHERE Title = $title";
+            getCat.Parameters.AddWithValue("$title", categoryTitle);
+            var categoryId = (long?)getCat.ExecuteScalar();
+            if (categoryId == null) return false;
+
+            // Get question ID by index
+            var getQuestion = connection.CreateCommand();
+            getQuestion.CommandText = @"
+                SELECT Id
+                FROM Questions
+                WHERE CategoryId = $categoryId
+                ORDER BY Id
+                LIMIT 1 OFFSET $index
+            ";
+            getQuestion.Parameters.AddWithValue("$categoryId", categoryId);
+            getQuestion.Parameters.AddWithValue("$index", index);
+
+            var questionId = (long?)getQuestion.ExecuteScalar();
+            if (questionId == null) return false;
+
+            // Delete
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = "DELETE FROM Questions WHERE Id = $id";
+            cmd.Parameters.AddWithValue("$id", questionId);
+            cmd.ExecuteNonQuery();
+
+            return true;
+        }
     }
 }

@@ -1,15 +1,19 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using QuizApi.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS – only localhost for now (exactly what you need)
+
+builder.Services.AddSingleton<QuizDataService>();
+builder.Services.AddSingleton<QuizCategoriesService>(sp =>
+    new QuizCategoriesService(sp.GetRequiredService<QuizDataService>()));
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DevPolicy", policy =>
@@ -17,13 +21,12 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();   
+              .AllowCredentials();
     });
 });
 
 var app = builder.Build();
 
-// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -31,10 +34,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// THIS LINE IS CRUCIAL – must come before MapControllers()
 app.UseCors("DevPolicy");
-
 app.MapControllers();
 
 app.Run();

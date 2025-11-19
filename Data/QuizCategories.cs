@@ -1,29 +1,41 @@
+// QuizApi/Data/QuizCategoriesService.cs
 using QuizApi.Models;
+using System.Collections.Generic;
 
 namespace QuizApi.Data
 {
-    public static class QuizCategories
+    public class QuizCategoriesService
     {
-        public static List<Category> GetCategories()
+        private readonly QuizDataService _quizService;
+
+        public QuizCategoriesService(QuizDataService quizService)
         {
-            return QuizData.Questions.Select(q => new Category
-            {
-                Title = q.Key,
-                TotalQuestions = q.Value.Count,
-                ImgSrc = GetImageForCategory(q.Key)
-            }).ToList();
+            _quizService = quizService;
         }
 
-        private static string GetImageForCategory(string category)
+        /// <summary>
+        /// Returns all categories with correct TotalQuestions count
+        /// </summary>
+        public List<Category> GetCategories()
         {
-            return category.ToLower() switch
+            var categories = _quizService.GetCategoryObjects();
+
+            foreach (var cat in categories)
             {
-                "html" => "https://cdn-icons-png.flaticon.com/512/732/732212.png",
-                "css" => "https://cdn-icons-png.flaticon.com/512/732/732190.png",
-                "javascript" => "https://cdn-icons-png.flaticon.com/512/5968/5968292.png",
-                "typescript" => "https://cdn-icons-png.flaticon.com/512/5968/5968381.png",
-                _ => ""
-            };
+                cat.TotalQuestions = _quizService
+                    .GetQuestionsByCategory(cat.Title)
+                    .Count;
+            }
+
+            return categories;
+        }
+
+        /// <summary>
+        /// Just forwards to QuizDataService (keeps controller clean)
+        /// </summary>
+        public void AddCategory(string title, string imgSrc)
+        {
+            _quizService.AddCategory(title, imgSrc);
         }
     }
 }
