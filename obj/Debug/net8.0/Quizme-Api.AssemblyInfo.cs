@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Quizme-Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6223e30bf6c8d93941b86b5edf37b4c89a8f41cc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1c0c90a52a50388de2e969a7fcf2d1124d66d08f")]
 [assembly: System.Reflection.AssemblyProductAttribute("Quizme-Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Quizme-Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

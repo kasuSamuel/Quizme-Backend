@@ -7,21 +7,19 @@ namespace QuizApi.Controller
     [Route("api/[controller]")]
     public class QuizController : ControllerBase
     {
-        // GET api/quiz → returns all category names
-        [HttpGet]
-        public IActionResult GetCategories()
+        [HttpGet("categories")]
+        public IActionResult GetCategoryList()
         {
-            return Ok(QuizData.Questions.Keys);
+            var categories = QuizCategories.GetCategories();
+            return Ok(categories);
         }
 
-        // GET api/quiz/html | api/quiz/JavaScript | etc.
         [HttpGet("{category}")]
         public IActionResult GetQuestions(string category)
         {
-            if (string.IsNullOrEmpty(category))
+            if (string.IsNullOrWhiteSpace(category))
                 return BadRequest(new { message = "Category is required" });
 
-            // Case-insensitive lookup
             var questionList = QuizData.Questions
                 .FirstOrDefault(kvp => kvp.Key.Equals(category, StringComparison.OrdinalIgnoreCase))
                 .Value;
