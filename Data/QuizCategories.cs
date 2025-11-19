@@ -1,16 +1,21 @@
 // QuizApi/Data/QuizCategoriesService.cs
 using QuizApi.Models;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace QuizApi.Data
 {
     public class QuizCategoriesService
     {
         private readonly QuizDataService _quizService;
+        private readonly ILogger<QuizCategoriesService> _logger;
 
-        public QuizCategoriesService(QuizDataService quizService)
+        public QuizCategoriesService(QuizDataService quizService, ILogger<QuizCategoriesService> logger)
         {
             _quizService = quizService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -35,6 +40,15 @@ namespace QuizApi.Data
         /// </summary>
         public void AddCategory(string title, string imgSrc)
         {
+            // Check if the category already exists before adding it
+            var existingCategory = _quizService.GetCategoryObjects().FirstOrDefault(c => c.Title == title);
+            if (existingCategory != null)
+            {
+                _logger.LogError($"Duplicate category title detected: {title}");
+                throw new Exception($"Category with title '{title}' already exists.");
+            }
+
+            // Proceed with adding the category if it doesn't exist
             _quizService.AddCategory(title, imgSrc);
         }
 

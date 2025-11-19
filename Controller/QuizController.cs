@@ -1,9 +1,9 @@
 // QuizApi/Controller/QuizController.cs
-
 using Microsoft.AspNetCore.Mvc;
 using QuizApi.Data;
 using QuizApi.Models;
 using System.Collections.Generic;
+using System;
 
 namespace QuizApi.Controller
 {
@@ -34,8 +34,16 @@ namespace QuizApi.Controller
             if (string.IsNullOrWhiteSpace(category?.Title))
                 return BadRequest(new { message = "Title is required" });
 
-            _categoryService.AddCategory(category.Title, category.ImgSrc ?? "");
-            return Ok(new { message = "Category added" });
+            try
+            {
+                _categoryService.AddCategory(category.Title, category.ImgSrc ?? "");
+                return Ok(new { message = "Category added successfully" });
+            }
+            catch (Exception ex)
+            {
+                // Return a BadRequest with the error message if the category already exists
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PUT api/quiz/categories/{id} → edit category (title or imgSrc)
