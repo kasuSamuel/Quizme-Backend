@@ -5,14 +5,17 @@ using QuizApi.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-
 builder.Services.AddSingleton<QuizDataService>();
+// Register QuizCategoriesService with the correct constructor
 builder.Services.AddSingleton<QuizCategoriesService>(sp =>
-    new QuizCategoriesService(sp.GetRequiredService<QuizDataService>()));
+    new QuizCategoriesService(
+        sp.GetRequiredService<QuizDataService>(),
+        sp.GetRequiredService<ILogger<QuizCategoriesService>>())); // Add ILogger<QuizCategoriesService> here
 
 builder.Services.AddCors(options =>
 {
