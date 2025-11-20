@@ -8,10 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(); // This is already added, just make sure it's here
 
 builder.Services.AddSingleton<QuizDataService>();
-// Register QuizCategoriesService with the correct constructor
 builder.Services.AddSingleton<QuizCategoriesService>(sp =>
     new QuizCategoriesService(
         sp.GetRequiredService<QuizDataService>(),
@@ -30,10 +29,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwagger(); // Enables Swagger endpoint
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Quiz API V1"); 
+        options.RoutePrefix = string.Empty;
+    });
 }
 
 app.UseHttpsRedirection();
