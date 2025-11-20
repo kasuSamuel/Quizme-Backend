@@ -8,13 +8,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(); // This is already added, just make sure it's here
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "Quizme API", Version = "v1" });
+});
 
 builder.Services.AddSingleton<QuizDataService>();
 builder.Services.AddSingleton<QuizCategoriesService>(sp =>
     new QuizCategoriesService(
         sp.GetRequiredService<QuizDataService>(),
-        sp.GetRequiredService<ILogger<QuizCategoriesService>>())); // Add ILogger<QuizCategoriesService> here
+        sp.GetRequiredService<ILogger<QuizCategoriesService>>()));
 
 builder.Services.AddCors(options =>
 {
@@ -29,16 +32,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// ENABLE SWAGGER IN ALL ENVIRONMENTS (especially Production on Render)
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger(); // Enables Swagger endpoint
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Quiz API V1"); 
-        options.RoutePrefix = string.Empty;
-    });
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Quizme API V1");
+    options.RoutePrefix = string.Empty; // Swagger UI loads at root URL
+});
 
 app.UseHttpsRedirection();
 app.UseCors("DevPolicy");
