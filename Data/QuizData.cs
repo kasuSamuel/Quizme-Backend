@@ -172,87 +172,64 @@ namespace QuizApi.Data
             return list;
         }
 
-        // ---------------- UPDATE QUESTION ----------------
-        public bool UpdateQuestion(string categoryTitle, int index, Question updatedQuestion)
-        {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+// ---------------- UPDATE QUESTION ----------------
+public bool UpdateQuestion(string categoryTitle, int questionId, Question updatedQuestion)
+{
+    using var connection = new SqliteConnection(_connectionString);
+    connection.Open();
 
-            // Get category ID
-            var getCat = connection.CreateCommand();
-            getCat.CommandText = "SELECT Id FROM Categories WHERE Title = $title";
-            getCat.Parameters.AddWithValue("$title", categoryTitle);
-            var categoryId = (long?)getCat.ExecuteScalar();
-            if (categoryId == null) return false;
+    // Get category ID
+    var getCat = connection.CreateCommand();
+    getCat.CommandText = "SELECT Id FROM Categories WHERE Title = $title";
+    getCat.Parameters.AddWithValue("$title", categoryTitle);
+    var categoryId = (long?)getCat.ExecuteScalar();
+    if (categoryId == null) return false;
 
-            // Get question ID by index
-            var getQuestion = connection.CreateCommand();
-            getQuestion.CommandText = @"
-                SELECT Id
-                FROM Questions
-                WHERE CategoryId = $categoryId
-                ORDER BY Id
-                LIMIT 1 OFFSET $index
-            ";
-            getQuestion.Parameters.AddWithValue("$categoryId", categoryId);
-            getQuestion.Parameters.AddWithValue("$index", index);
+    // Update question directly by Id
+    var cmd = connection.CreateCommand();
+    cmd.CommandText = @"
+        UPDATE Questions
+        SET QuestionText = $text,
+            Options = $options,
+            Answer = $answer
+        WHERE Id = $id AND CategoryId = $categoryId
+    ";
+    cmd.Parameters.AddWithValue("$text", updatedQuestion.QuestionText);
+    cmd.Parameters.AddWithValue("$options", updatedQuestion.Options != null ? JsonSerializer.Serialize(updatedQuestion.Options) : null);
+    cmd.Parameters.AddWithValue("$answer", updatedQuestion.Answer);
+    cmd.Parameters.AddWithValue("$id", questionId);
+    cmd.Parameters.AddWithValue("$categoryId", categoryId);
 
-            var questionId = (long?)getQuestion.ExecuteScalar();
-            if (questionId == null) return false;
+    var rowsAffected = cmd.ExecuteNonQuery();
+    return rowsAffected > 0; // returns true if question was updated
+}
 
-            // Update question
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = @"
-                UPDATE Questions
-                SET QuestionText = $text,
-                    Options = $options,
-                    Answer = $answer
-                WHERE Id = $id
-            ";
-            cmd.Parameters.AddWithValue("$text", updatedQuestion.QuestionText);
-            cmd.Parameters.AddWithValue("$options", updatedQuestion.Options != null ? JsonSerializer.Serialize(updatedQuestion.Options) : null);
-            cmd.Parameters.AddWithValue("$answer", updatedQuestion.Answer);
-            cmd.Parameters.AddWithValue("$id", questionId);
 
-            cmd.ExecuteNonQuery();
-            return true;
-        }
+// ---------------- DELETE QUESTION ----------------
+public bool DeleteQuestion(string categoryTitle, int questionId)
+{
+    using var connection = new SqliteConnection(_connectionString);
+    connection.Open();
 
-        // ---------------- DELETE QUESTION ----------------
-        public bool DeleteQuestion(string categoryTitle, int index)
-        {
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
+    // Get category ID
+    var getCat = connection.CreateCommand();
+    getCat.CommandText = "SELECT Id FROM Categories WHERE Title = $title";
+    getCat.Parameters.AddWithValue("$title", categoryTitle);
+    var categoryId = (long?)getCat.ExecuteScalar();
+    if (categoryId == null) return false;
 
-            // Get category ID
-            var getCat = connection.CreateCommand();
-            getCat.CommandText = "SELECT Id FROM Categories WHERE Title = $title";
-            getCat.Parameters.AddWithValue("$title", categoryTitle);
-            var categoryId = (long?)getCat.ExecuteScalar();
-            if (categoryId == null) return false;
+    // Delete the question directly by Id
+    var cmd = connection.CreateCommand();
+    cmd.CommandText = @"
+        DELETE FROM Questions
+        WHERE Id = $id AND CategoryId = $categoryId
+    ";
+    cmd.Parameters.AddWithValue("$id", questionId);
+    cmd.Parameters.AddWithValue("$categoryId", categoryId);
 
-            // Get question ID by index
-            var getQuestion = connection.CreateCommand();
-            getQuestion.CommandText = @"
-                SELECT Id
-                FROM Questions
-                WHERE CategoryId = $categoryId
-                ORDER BY Id
-                LIMIT 1 OFFSET $index
-            ";
-            getQuestion.Parameters.AddWithValue("$categoryId", categoryId);
-            getQuestion.Parameters.AddWithValue("$index", index);
+    var rowsAffected = cmd.ExecuteNonQuery();
+    return rowsAffected > 0; // returns true if question was deleted
+}
 
-            var questionId = (long?)getQuestion.ExecuteScalar();
-            if (questionId == null) return false;
-
-            // Delete
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "DELETE FROM Questions WHERE Id = $id";
-            cmd.Parameters.AddWithValue("$id", questionId);
-            cmd.ExecuteNonQuery();
-
-            return true;
-        }
     }
 }
