@@ -93,22 +93,21 @@ namespace QuizApi.Controller
             return Ok(new { message = "Question added successfully" });
         }
 
-        // PUT api/quiz/{category}/questions/{id}
-        [HttpPut("{category}/questions/{id}")]
-        public IActionResult UpdateQuestion(string category, int id, [FromBody] Question question)
-        {
-            return _quizService.UpdateQuestion(category, id, question)
-                ? Ok(new { message = "Question updated" })
-                : NotFound(new { message = "Question not found" });
-        }
-
-        // DELETE api/quiz/{category}/questions/{id}
-        [HttpDelete("{category}/questions/{id}")]
-        public IActionResult DeleteQuestion(string category, int id)
-        {
-            return _quizService.DeleteQuestion(category, id)
-                ? Ok(new { message = "Question deleted" })
-                : NotFound(new { message = "Question not found" });
-        }
+ // PUT api/quiz/questions/{id}
+[HttpPut("questions/{id}")]
+public IActionResult UpdateQuestion(int id, [FromBody] Question question)
+{
+    return _quizService.UpdateQuestion(id, question)
+        ? Ok(new { message = "Question updated" })
+        : NotFound(new { message = "Question not found" });
+}
+// DELETE api/quiz/questions/{id}
+[HttpDelete("questions/{id}")]
+public IActionResult DeleteQuestion(int id)
+{
+    return _quizService.DeleteQuestion(id)
+        ? Ok(new { message = "Question deleted" })
+        : NotFound(new { message = "Question not found" });
+}
     }
 }
