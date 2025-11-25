@@ -1,5 +1,3 @@
-// QuizApi/Data/QuizDataService.cs
-
 using Microsoft.Data.Sqlite;
 using QuizApi.Models;
 using System.Collections.Generic;
@@ -20,7 +18,7 @@ namespace QuizApi.Data
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS Categories (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Title TEXT NOT NULL UNIQUE,
+                    Title TEXT NOT NULL UNIQUE COLLATE NOCASE,
                     ImgSrc TEXT
                 );
 
@@ -30,6 +28,7 @@ namespace QuizApi.Data
                     QuestionText TEXT NOT NULL,
                     Options TEXT,
                     Answer TEXT,
+                    TimeLimit INTEGER,
                     FOREIGN KEY (CategoryId) REFERENCES Categories (Id)
                 );
             ";
@@ -48,7 +47,7 @@ namespace QuizApi.Data
                 VALUES ($title, $imgSrc)
             ";
             cmd.Parameters.AddWithValue("$title", title);
-            cmd.Parameters.AddWithValue("$imgSrc", imgSrc);
+            cmd.Parameters.AddWithValue("$imgSrc", imgSrc ?? string.Empty);
             cmd.ExecuteNonQuery();
         }
 
@@ -69,7 +68,7 @@ namespace QuizApi.Data
             cmd.Parameters.AddWithValue("$newImgSrc", newImgSrc ?? string.Empty);
 
             var rowsAffected = cmd.ExecuteNonQuery();
-            return rowsAffected > 0; // returns true if category was updated
+            return rowsAffected > 0;
         }
 
         // ---------------- DELETE CATEGORY ----------------
@@ -86,7 +85,7 @@ namespace QuizApi.Data
             cmd.Parameters.AddWithValue("$id", id);
 
             var rowsAffected = cmd.ExecuteNonQuery();
-            return rowsAffected > 0; // returns true if category was deleted
+            return rowsAffected > 0;
         }
 
         // ---------------- ADD QUESTION ----------------
@@ -96,7 +95,8 @@ namespace QuizApi.Data
             connection.Open();
 
             var getCat = connection.CreateCommand();
-            getCat.CommandText = "SELECT Id FROM Categories WHERE Title = $title";
+            // Case-insensitive comparison using LOWER()
+            getCat.CommandText = "SELECT Id FROM Categories WHERE LOWER(Title) = LOWER($title)";
             getCat.Parameters.AddWithValue("$title", categoryTitle);
 
             var categoryId = (long?)getCat.ExecuteScalar();
@@ -104,13 +104,14 @@ namespace QuizApi.Data
 
             var cmd = connection.CreateCommand();
             cmd.CommandText = @"
-                INSERT INTO Questions (CategoryId, QuestionText, Options, Answer)
-                VALUES ($categoryId, $text, $options, $answer)
+                INSERT INTO Questions (CategoryId, QuestionText, Options, Answer, TimeLimit)
+                VALUES ($categoryId, $text, $options, $answer, $timeLimit)
             ";
             cmd.Parameters.AddWithValue("$categoryId", categoryId);
             cmd.Parameters.AddWithValue("$text", question.QuestionText);
             cmd.Parameters.AddWithValue("$options", question.Options != null ? JsonSerializer.Serialize(question.Options) : null);
             cmd.Parameters.AddWithValue("$answer", question.Answer);
+            cmd.Parameters.AddWithValue("$timeLimit", question.TimeLimit);
 
             cmd.ExecuteNonQuery();
         }
@@ -124,11 +125,12 @@ namespace QuizApi.Data
             connection.Open();
 
             var cmd = connection.CreateCommand();
+            // Case-insensitive comparison using LOWER()
             cmd.CommandText = @"
-                SELECT Questions.Id, Questions.QuestionText, Questions.Options, Questions.Answer
+                SELECT Questions.Id, Questions.QuestionText, Questions.Options, Questions.Answer, Questions.TimeLimit
                 FROM Questions
                 JOIN Categories ON Categories.Id = Questions.CategoryId
-                WHERE Categories.Title = $title
+                WHERE LOWER(Categories.Title) = LOWER($title)
             ";
             cmd.Parameters.AddWithValue("$title", title);
 
@@ -140,7 +142,8 @@ namespace QuizApi.Data
                     Id = reader.GetInt32(0),
                     QuestionText = reader.GetString(1),
                     Options = reader.IsDBNull(2) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(2)),
-                    Answer = reader.IsDBNull(3) ? null : reader.GetString(3)
+                    Answer = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    TimeLimit = reader.GetInt32(4)
                 });
             }
 
@@ -172,48 +175,46 @@ namespace QuizApi.Data
             return list;
         }
 
-// ---------------- UPDATE QUESTION ----------------
-public bool UpdateQuestion(int questionId, Question updatedQuestion)
-{
-    using var connection = new SqliteConnection(_connectionString);
-    connection.Open();
+        // ---------------- UPDATE QUESTION ----------------
+        public bool UpdateQuestion(int questionId, Question updatedQuestion)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
 
-    // Update question directly by Id
-    var cmd = connection.CreateCommand();
-    cmd.CommandText = @"
-        UPDATE Questions
-        SET QuestionText = $text,
-            Options = $options,
-            Answer = $answer
-        WHERE Id = $id
-    ";
-    cmd.Parameters.AddWithValue("$text", updatedQuestion.QuestionText);
-    cmd.Parameters.AddWithValue("$options", updatedQuestion.Options != null ? JsonSerializer.Serialize(updatedQuestion.Options) : null);
-    cmd.Parameters.AddWithValue("$answer", updatedQuestion.Answer);
-    cmd.Parameters.AddWithValue("$id", questionId);
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                UPDATE Questions
+                SET QuestionText = $text,
+                    Options = $options,
+                    Answer = $answer,
+                    TimeLimit = $timeLimit
+                WHERE Id = $id
+            ";
+            cmd.Parameters.AddWithValue("$text", updatedQuestion.QuestionText);
+            cmd.Parameters.AddWithValue("$options", updatedQuestion.Options != null ? JsonSerializer.Serialize(updatedQuestion.Options) : null);
+            cmd.Parameters.AddWithValue("$answer", updatedQuestion.Answer);
+            cmd.Parameters.AddWithValue("$timeLimit", updatedQuestion.TimeLimit);
+            cmd.Parameters.AddWithValue("$id", questionId);
 
-    var rowsAffected = cmd.ExecuteNonQuery();
-    return rowsAffected > 0; // returns true if question was updated
-}
+            var rowsAffected = cmd.ExecuteNonQuery();
+            return rowsAffected > 0;
+        }
 
+        // ---------------- DELETE QUESTION ----------------
+        public bool DeleteQuestion(int questionId)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
 
-// ---------------- DELETE QUESTION ----------------
-public bool DeleteQuestion(int questionId)
-{
-    using var connection = new SqliteConnection(_connectionString);
-    connection.Open();
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                DELETE FROM Questions
+                WHERE Id = $id
+            ";
+            cmd.Parameters.AddWithValue("$id", questionId);
 
-    // Delete the question directly by Id
-    var cmd = connection.CreateCommand();
-    cmd.CommandText = @"
-        DELETE FROM Questions
-        WHERE Id = $id
-    ";
-    cmd.Parameters.AddWithValue("$id", questionId);
-
-    var rowsAffected = cmd.ExecuteNonQuery();
-    return rowsAffected > 0; 
-}
-
-}
+            var rowsAffected = cmd.ExecuteNonQuery();
+            return rowsAffected > 0;
+        }
+    }
 }

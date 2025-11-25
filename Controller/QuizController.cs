@@ -1,9 +1,7 @@
-// QuizApi/Controller/QuizController.cs
 using Microsoft.AspNetCore.Mvc;
 using QuizApi.Data;
 using QuizApi.Models;
 using System.Collections.Generic;
-using System;
 
 namespace QuizApi.Controller
 {
@@ -89,25 +87,38 @@ namespace QuizApi.Controller
             if (question == null || string.IsNullOrWhiteSpace(question.QuestionText))
                 return BadRequest(new { message = "Valid question is required" });
 
+            // Ensure TimeLimit is valid (must be greater than 0)
+            if (question.TimeLimit <= 0)
+                return BadRequest(new { message = "Valid TimeLimit (greater than 0) is required" });
+
             _quizService.AddQuestion(category, question);
             return Ok(new { message = "Question added successfully" });
         }
 
- // PUT api/quiz/questions/{id}
-[HttpPut("questions/{id}")]
-public IActionResult UpdateQuestion(int id, [FromBody] Question question)
-{
-    return _quizService.UpdateQuestion(id, question)
-        ? Ok(new { message = "Question updated" })
-        : NotFound(new { message = "Question not found" });
-}
-// DELETE api/quiz/questions/{id}
-[HttpDelete("questions/{id}")]
-public IActionResult DeleteQuestion(int id)
-{
-    return _quizService.DeleteQuestion(id)
-        ? Ok(new { message = "Question deleted" })
-        : NotFound(new { message = "Question not found" });
-}
+        // PUT api/quiz/questions/{id}
+        [HttpPut("questions/{id}")]
+        public IActionResult UpdateQuestion(int id, [FromBody] Question question)
+        {
+            if (question == null || string.IsNullOrWhiteSpace(question.QuestionText))
+                return BadRequest(new { message = "Valid question is required" });
+
+            // Ensure TimeLimit is valid (must be greater than 0)
+            if (question.TimeLimit <= 0)
+                return BadRequest(new { message = "Valid TimeLimit (greater than 0) is required" });
+
+            var updated = _quizService.UpdateQuestion(id, question);
+            return updated
+                ? Ok(new { message = "Question updated" })
+                : NotFound(new { message = "Question not found" });
+        }
+
+        // DELETE api/quiz/questions/{id}
+        [HttpDelete("questions/{id}")]
+        public IActionResult DeleteQuestion(int id)
+        {
+            return _quizService.DeleteQuestion(id)
+                ? Ok(new { message = "Question deleted" })
+                : NotFound(new { message = "Question not found" });
+        }
     }
 }

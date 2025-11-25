@@ -1,3 +1,4 @@
+// Program.cs
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -5,7 +6,7 @@ using QuizApi.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -13,35 +14,46 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Quizme API", Version = "v1" });
 });
 
+// Register services as Singletons
 builder.Services.AddSingleton<QuizDataService>();
-builder.Services.AddSingleton<QuizCategoriesService>(sp =>
-    new QuizCategoriesService(
-        sp.GetRequiredService<QuizDataService>(),
-        sp.GetRequiredService<ILogger<QuizCategoriesService>>()));
+builder.Services.AddSingleton<QuizCategoriesService>();
 
+// Add CORS policy
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("DevPolicy", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.AllowAnyOrigin()
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowAnyMethod();
     });
 });
 
 var app = builder.Build();
 
-// ENABLE SWAGGER IN ALL ENVIRONMENTS (especially Production on Render)
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+// Configure the HTTP request pipeline
+if (app.Environment.IsDevelopment())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Quizme API V1");
-    options.RoutePrefix = string.Empty; // Swagger UI loads at root URL
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Quizme API V1");
+        options.RoutePrefix = string.Empty;
+    });
+}
+else
+{
+    // Enable Swagger in production for documentation
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Quizme API V1");
+        options.RoutePrefix = string.Empty;
+    });
+}
 
 app.UseHttpsRedirection();
-app.UseCors("DevPolicy");
+app.UseCors("AllowAll");
 app.MapControllers();
 
 app.Run();

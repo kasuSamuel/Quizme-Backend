@@ -1,6 +1,5 @@
 C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\bin\Debug\net8.0\appsettings.Development.json
 C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\bin\Debug\net8.0\appsettings.json
-C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\bin\Debug\net8.0\quiz.db
 C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\bin\Debug\net8.0\Quizme-Api.exe
 C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\bin\Debug\net8.0\Quizme-Api.deps.json
 C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\bin\Debug\net8.0\Quizme-Api.runtimeconfig.json
@@ -60,3 +59,4 @@ C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\obj\Debug\net8.0\refint\Qu
 C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\obj\Debug\net8.0\Quizme-Api.pdb
 C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\obj\Debug\net8.0\Quizme-Api.genruntimeconfig.cache
 C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\obj\Debug\net8.0\ref\Quizme-Api.dll
+C:\Users\kasus\Desktop\projects\Quizme_api\Quizme-Api\bin\Debug\net8.0\quiz.db
