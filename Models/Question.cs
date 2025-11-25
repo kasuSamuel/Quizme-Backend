@@ -7,6 +7,6 @@ namespace QuizApi.Models
         public List<string>? Options { get; set; }
         public string? Answer { get; set; }
 
-        public int TimeLimit { get; set; }
+        public int? TimeLimit { get; set; }
     }
 }

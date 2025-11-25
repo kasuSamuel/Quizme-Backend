@@ -1,4 +1,3 @@
-// QuizApi/Data/QuizCategoriesService.cs
 using QuizApi.Models;
 using Microsoft.Extensions.Logging;
 using System;
@@ -18,9 +17,6 @@ namespace QuizApi.Data
             _logger = logger;
         }
 
-        /// <summary>
-        /// Returns all categories with correct TotalQuestions count
-        /// </summary>
         public List<Category> GetCategories()
         {
             var categories = _quizService.GetCategoryObjects();
@@ -35,10 +31,7 @@ namespace QuizApi.Data
             return categories;
         }
 
-        /// <summary>
-        /// Adds a new category to the database.
-        /// </summary>
-        public void AddCategory(string title, string imgSrc)
+        public void AddCategory(string title, string imgSrc, int defaultTimeLimit)
         {
             // Check if the category already exists before adding it
             var existingCategory = _quizService.GetCategoryObjects().FirstOrDefault(c => c.Title == title);
@@ -49,21 +42,15 @@ namespace QuizApi.Data
             }
 
             // Proceed with adding the category if it doesn't exist
-            _quizService.AddCategory(title, imgSrc);
+            _quizService.AddCategory(title, imgSrc, defaultTimeLimit);
         }
 
-        /// <summary>
-        /// Updates an existing category's details.
-        /// </summary>
-        public bool UpdateCategory(int id, string newTitle, string newImgSrc)
+        public bool UpdateCategory(int id, string newTitle, string newImgSrc, int defaultTimeLimit)
         {
             // Forward the update request to QuizDataService
-            return _quizService.UpdateCategory(id, newTitle, newImgSrc);
+            return _quizService.UpdateCategory(id, newTitle, newImgSrc,  defaultTimeLimit);
         }
 
-        /// <summary>
-        /// Deletes a category and all associated questions.
-        /// </summary>
         public bool DeleteCategory(int id)
         {
             // Forward the delete request to QuizDataService

@@ -34,7 +34,7 @@ namespace QuizApi.Controller
 
             try
             {
-                _categoryService.AddCategory(category.Title, category.ImgSrc ?? "");
+                _categoryService.AddCategory(category.Title, category.ImgSrc ?? "", category.DefaultTimeLimit);
                 return Ok(new { message = "Category added successfully" });
             }
             catch (Exception ex)
@@ -51,7 +51,7 @@ namespace QuizApi.Controller
             if (string.IsNullOrWhiteSpace(category?.Title))
                 return BadRequest(new { message = "Title is required" });
 
-            var updated = _categoryService.UpdateCategory(id, category.Title, category.ImgSrc);
+            var updated = _categoryService.UpdateCategory(id, category.Title, category.ImgSrc, category.DefaultTimeLimit);
             return updated
                 ? Ok(new { message = "Category updated" })
                 : NotFound(new { message = "Category not found" });

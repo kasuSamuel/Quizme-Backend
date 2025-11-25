@@ -19,7 +19,8 @@ namespace QuizApi.Data
                 CREATE TABLE IF NOT EXISTS Categories (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     Title TEXT NOT NULL UNIQUE COLLATE NOCASE,
-                    ImgSrc TEXT
+                    ImgSrc TEXT,
+                    DefaultTimeLimit INTEGER
                 );
 
                 CREATE TABLE IF NOT EXISTS Questions (
@@ -36,23 +37,24 @@ namespace QuizApi.Data
         }
 
         // ---------------- ADD CATEGORY ----------------
-        public void AddCategory(string title, string imgSrc)
+        public void AddCategory(string title, string imgSrc, int defaultTimeLimit)
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
             var cmd = connection.CreateCommand();
             cmd.CommandText = @"
-                INSERT INTO Categories (Title, ImgSrc)
-                VALUES ($title, $imgSrc)
+                INSERT INTO Categories (Title, ImgSrc, DefaultTimeLimit)
+                VALUES ($title, $imgSrc, $defaultTimeLimit)
             ";
             cmd.Parameters.AddWithValue("$title", title);
             cmd.Parameters.AddWithValue("$imgSrc", imgSrc ?? string.Empty);
+            cmd.Parameters.AddWithValue("$defaultTimeLimit", defaultTimeLimit);
             cmd.ExecuteNonQuery();
         }
 
         // ---------------- UPDATE CATEGORY ----------------
-        public bool UpdateCategory(int id, string newTitle, string newImgSrc)
+        public bool UpdateCategory(int id, string newTitle, string newImgSrc, int defaultTimeLimit)
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
@@ -60,12 +62,13 @@ namespace QuizApi.Data
             var cmd = connection.CreateCommand();
             cmd.CommandText = @"
                 UPDATE Categories
-                SET Title = $newTitle, ImgSrc = $newImgSrc
+                SET Title = $newTitle, ImgSrc = $newImgSrc, DefaultTimeLimit = $defaultTimeLimit
                 WHERE Id = $id
             ";
             cmd.Parameters.AddWithValue("$id", id);
             cmd.Parameters.AddWithValue("$newTitle", newTitle);
             cmd.Parameters.AddWithValue("$newImgSrc", newImgSrc ?? string.Empty);
+            cmd.Parameters.AddWithValue("$defaultTimeLimit", defaultTimeLimit);
 
             var rowsAffected = cmd.ExecuteNonQuery();
             return rowsAffected > 0;
@@ -95,12 +98,14 @@ namespace QuizApi.Data
             connection.Open();
 
             var getCat = connection.CreateCommand();
-            // Case-insensitive comparison using LOWER()
-            getCat.CommandText = "SELECT Id FROM Categories WHERE LOWER(Title) = LOWER($title)";
+            getCat.CommandText = "SELECT Id, DefaultTimeLimit FROM Categories WHERE LOWER(Title) = LOWER($title)";
             getCat.Parameters.AddWithValue("$title", categoryTitle);
 
-            var categoryId = (long?)getCat.ExecuteScalar();
-            if (categoryId == null) return;
+            using var reader = getCat.ExecuteReader();
+            if (!reader.Read()) return;  // No category found
+
+            var categoryId = reader.GetInt32(0);
+            var categoryDefaultTimeLimit = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
 
             var cmd = connection.CreateCommand();
             cmd.CommandText = @"
@@ -111,44 +116,58 @@ namespace QuizApi.Data
             cmd.Parameters.AddWithValue("$text", question.QuestionText);
             cmd.Parameters.AddWithValue("$options", question.Options != null ? JsonSerializer.Serialize(question.Options) : null);
             cmd.Parameters.AddWithValue("$answer", question.Answer);
-            cmd.Parameters.AddWithValue("$timeLimit", question.TimeLimit);
+            // Use the question's TimeLimit if set, otherwise use the category's DefaultTimeLimit
+            cmd.Parameters.AddWithValue("$timeLimit", question.TimeLimit > 0 ? question.TimeLimit : categoryDefaultTimeLimit);
 
             cmd.ExecuteNonQuery();
         }
 
         // ---------------- GET QUESTIONS BY CATEGORY ----------------
-        public List<Question> GetQuestionsByCategory(string title)
+public List<Question> GetQuestionsByCategory(string title)
+{
+    var list = new List<Question>();
+
+    using var connection = new SqliteConnection(_connectionString);
+    connection.Open();
+
+    // First, get the category to check the DefaultTimeLimit
+    var catCmd = connection.CreateCommand();
+    catCmd.CommandText = "SELECT DefaultTimeLimit FROM Categories WHERE LOWER(Title) = LOWER($title)";
+    catCmd.Parameters.AddWithValue("$title", title);
+
+    // Explicitly handle casting from long to int (nullable)
+    var result = catCmd.ExecuteScalar();
+    int? categoryDefaultTimeLimit = result != DBNull.Value ? (int?)Convert.ToInt32(result) : null;
+
+    var cmd = connection.CreateCommand();
+    cmd.CommandText = @"
+        SELECT Questions.Id, Questions.QuestionText, Questions.Options, Questions.Answer, Questions.TimeLimit
+        FROM Questions
+        JOIN Categories ON Categories.Id = Questions.CategoryId
+        WHERE LOWER(Categories.Title) = LOWER($title)
+    ";
+    cmd.Parameters.AddWithValue("$title", title);
+
+    using var reader = cmd.ExecuteReader();
+    while (reader.Read())
+    {
+        var questionTimeLimit = reader.IsDBNull(4) ? 0 : reader.GetInt32(4);
+
+        // Apply the category DefaultTimeLimit if the question doesn't have a TimeLimit
+        var effectiveTimeLimit = questionTimeLimit > 0 ? questionTimeLimit : categoryDefaultTimeLimit ?? 0;
+
+        list.Add(new Question
         {
-            var list = new List<Question>();
+            Id = reader.GetInt32(0),
+            QuestionText = reader.GetString(1),
+            Options = reader.IsDBNull(2) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(2)),
+            Answer = reader.IsDBNull(3) ? null : reader.GetString(3),
+            TimeLimit = effectiveTimeLimit
+        });
+    }
 
-            using var connection = new SqliteConnection(_connectionString);
-            connection.Open();
-
-            var cmd = connection.CreateCommand();
-            // Case-insensitive comparison using LOWER()
-            cmd.CommandText = @"
-                SELECT Questions.Id, Questions.QuestionText, Questions.Options, Questions.Answer, Questions.TimeLimit
-                FROM Questions
-                JOIN Categories ON Categories.Id = Questions.CategoryId
-                WHERE LOWER(Categories.Title) = LOWER($title)
-            ";
-            cmd.Parameters.AddWithValue("$title", title);
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                list.Add(new Question
-                {
-                    Id = reader.GetInt32(0),
-                    QuestionText = reader.GetString(1),
-                    Options = reader.IsDBNull(2) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(2)),
-                    Answer = reader.IsDBNull(3) ? null : reader.GetString(3),
-                    TimeLimit = reader.GetInt32(4)
-                });
-            }
-
-            return list;
-        }
+    return list;
+}
 
         // ---------------- GET ALL CATEGORIES ----------------
         public List<Category> GetCategoryObjects()
@@ -159,7 +178,7 @@ namespace QuizApi.Data
             connection.Open();
 
             var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT Id, Title, ImgSrc FROM Categories";
+            cmd.CommandText = "SELECT Id, Title, ImgSrc, DefaultTimeLimit FROM Categories";
 
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -168,7 +187,8 @@ namespace QuizApi.Data
                 {
                     Id = reader.GetInt32(0),
                     Title = reader.GetString(1),
-                    ImgSrc = reader.IsDBNull(2) ? "" : reader.GetString(2)
+                    ImgSrc = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                    DefaultTimeLimit = reader.IsDBNull(3) ? 0 : reader.GetInt32(3)
                 });
             }
 
