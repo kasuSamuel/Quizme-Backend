@@ -88,8 +88,8 @@ namespace QuizApi.Controller
                 return BadRequest(new { message = "Valid question is required" });
 
             // Ensure TimeLimit is valid (must be greater than 0)
-            if (question.TimeLimit <= 0)
-                return BadRequest(new { message = "Valid TimeLimit (greater than 0) is required" });
+            if (question.TimeLimit < 0)
+                return BadRequest(new { message = "TimeLimit cannot be negative" });
 
             _quizService.AddQuestion(category, question);
             return Ok(new { message = "Question added successfully" });
@@ -103,8 +103,8 @@ namespace QuizApi.Controller
                 return BadRequest(new { message = "Valid question is required" });
 
             // Ensure TimeLimit is valid (must be greater than 0)
-            if (question.TimeLimit <= 0)
-                return BadRequest(new { message = "Valid TimeLimit (greater than 0) is required" });
+            if (question.TimeLimit < 0)
+                return BadRequest(new { message = "TimeLimit cannot be negative" });
 
             var updated = _quizService.UpdateQuestion(id, question);
             return updated
